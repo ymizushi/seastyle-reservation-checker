@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "noImplicitAny": true,
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "outDir": "dist/",
+    "sourceMap": true,
+    "baseUrl": ".", 
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM"],
+    "strict": true,
+    // "paths": {
+    //   "puppeteer": ["node_modules/puppeteer"], // This mapping is relative to "baseUrl"
+    //   "source-map-support": ["node_modules/source-map-support"],
+    //   "node-fetch": ["node_modules/node-fetch"]
+    // },
+    "moduleResolution": "node"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "**/*.spec.ts"]
+}
