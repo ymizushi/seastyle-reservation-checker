@@ -7,7 +7,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "exec": "npm run build && cd dist/ && node core.js"
+    "exec": "npm run build && cd dist/ && node core.js",
+    "cypress:open": "cypress open"
   },
   "author": "",
   "license": "ISC",
