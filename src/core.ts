@@ -4,7 +4,6 @@ import * as sourceMapSupport from "source-map-support"
 
 import fetch from 'node-fetch';
 
-
 const SUCCEEDED = "SUCCEEDED"  as const
 const FAILED = "FAILED" as const
 

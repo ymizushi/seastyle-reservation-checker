@@ -10,11 +10,10 @@
     "exec": "npm run build && cd dist/ && node core.js",
     "cypress:open": "cypress open"
   },
-  "author": "",
+  "author": "ymizushi",
   "license": "ISC",
   "dependencies": {
     "@types/node-fetch": "^2.6.2",
-    "chromy": "^0.5.11",
     "node-fetch": "^2.6.7",
     "puppeteer": "^15.5.0",
     "typescript": "^4.7.4"
