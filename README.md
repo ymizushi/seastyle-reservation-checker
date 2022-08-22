@@ -1,4 +1,6 @@
 # seastyle-reservation-checker
+![example workflow](https://github.com/ymizushi/seastyle-reservation-checker/actions/workflows/main.yml/badge.svg)
+
 
 ## build
 
