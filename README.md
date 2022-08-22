@@ -1,6 +1,5 @@
 # seastyle-reservation-checker
-![example workflow](https://github.com/ymizushi/seastyle-reservation-checker/actions/workflows/main.yml/badge.svg)
-
+[![Node.js CI](https://github.com/ymizushi/seastyle-reservation-checker/actions/workflows/node.js.yml/badge.svg)](https://github.com/ymizushi/seastyle-reservation-checker/actions/workflows/node.js.yml)
 
 ## build
 
