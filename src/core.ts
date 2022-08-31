@@ -14,15 +14,7 @@ export type ActionResult = {
   page: puppeteer.Page;
 };
 
-async function postData(url = "", data = {}) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-}
+const SLACK_WEBHOOK_URL= process.env.SLACK_WEBHOOK_URL
 
 // Cookie承諾
 async function acceptCookie(page: puppeteer.Page): Promise<ActionResult> {
@@ -40,12 +32,8 @@ async function selectDate(
   targetDate: string
 ): Promise<ActionResult> {
   await page.waitForTimeout(1000);
-  const dateElements = await page.$x(`//b[text()='${targetDate}']`);
+  const dateElements = await page.$x(`//a[text()='${targetDate}']`);
   if (dateElements.length > 0) {
-    console.log(`SLACK_WEBHOOK_URL=${process.env.SLACK_WEBHOOK_URL}`);
-    await postData(process.env.SLACK_WEBHOOK_URL, {
-      text: "https://sea-style-m.yamaha-motor.co.jp/Marina/Info/reserve/marinacd/J14-0180 で船が予約できます",
-    });
     await (dateElements[0] as any).click();
     return {
       result: SUCCEEDED,
@@ -59,37 +47,83 @@ async function selectDate(
 }
 
 async function scrape() {
-  const browser = await puppeteer.launch({ headless: false });
+  const browser = await puppeteer.launch({
+    headless: false,
+    defaultViewport: {
+      width: 2000,
+      height: 1200,
+    }
+  });
+    
   const page = await browser.newPage();
 
   await page.goto(
-    "https://sea-style-m.yamaha-motor.co.jp/Marina/Info/reserve/marinacd/J14-0180"
+    "https://sea-style-m.yamaha-motor.co.jp/Search/Day/boat"
   );
 
+  const targetDate = '10'
+
   await page.waitForTimeout(1000);
-  await selectDate(page, "22");
-  await browser.close();
+
+  await page.click('h2');
+  await page.waitForTimeout(1000);
+
+  await page.click("input[name=searchdate]");
+  await page.waitForTimeout(1000);
+
+  await page.waitForTimeout(1000);
+  await selectDate(page, targetDate)
+
+  await page.waitForTimeout(1000);
+  await page.select('select[name="reservationArea"]', 'B02')
+  
+  await page.waitForTimeout(1000);
+  await page.select('select[name="boat"]', '1')
+  
+  // 検索ボタン押下
+  await page.waitForTimeout(1000)
+  await page.click('input[type="button"]');
+
+  await page.waitForTimeout(1000)
+  await page.focus('#sort_boat')
+
+  await page.waitForTimeout(5000)
+  const elements = await page.$$("div") 
+  for (const element of elements) {
+    console.log(await element.jsonValue())
+  }
+  const contents = await page.$$eval("p.marinaName", list => {
+      const targetUrl = "https://sea-style-m.yamaha-motor.co.jp"
+      return list.map(data => {
+        return {
+          marinaUrl: `${targetUrl}${data.children.item(0)?.getAttribute('href')}`,
+          marinaName: data.textContent
+        }
+      })
+  });
+  notifySlack(contents.map(obj => `${targetDate}日は以下のマリーナでボートの空きがあります\n` + JSON.stringify(obj)).join("\n"))
+}
+
+async function notifySlack(content: string) {
+    return await postData(SLACK_WEBHOOK_URL, {
+      text: content,
+    });
+}
+
+async function postData(url = "", data = {}) {
+  return await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
 }
 
 function main() {
   sourceMapSupport.install();
+  console.log(`SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}`);
   scrape();
 }
 
 main();
-
-//	// エリア入力
-//	await page.waitfortimeout(1000)
-//	await page.select('select[name="reservationarea"]', 'b02')
-//
-//	// 挺タイプ入力
-//	await page.waitfortimeout(1000)
-//	await page.select('select[name="boat"]', '1')
-//
-//
-//	// 検索ボタン押下
-//	await page.waitfortimeout(1000)
-//	await page.click('input[type="button"]');
-//
-//	await page.waitfortimeout(1000)
-//  await page.screenshot({path: 'example.png'});
