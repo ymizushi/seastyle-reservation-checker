@@ -15,6 +15,7 @@
   "author": "ymizushi",
   "license": "ISC",
   "dependencies": {
+    "@holiday-jp/holiday_jp": "^2.4.0",
     "@types/node-fetch": "^2.6.2",
     "node-fetch": "^2.6.7",
     "puppeteer": "^15.5.0",
