@@ -81,6 +81,12 @@ async function selectDate(
   };
 }
 
+type Boat = {
+  boatName: string|null,
+  marinaName: string|null,
+  marinaUrl: string|null,
+}
+
 async function scrape() {
   const browser = await puppeteer.launch({
     headless: false,
@@ -96,7 +102,7 @@ async function scrape() {
     "https://sea-style-m.yamaha-motor.co.jp/Search/Day/boat"
   );
 
-  const targetYear = 2022
+  const targetYear = "2022"
   const targetMonth = "9" 
   const holidayMap = splitDateByMonth(filterHolidays(dateRange(new Date(), 30)))
 
@@ -105,34 +111,31 @@ async function scrape() {
 
     // "条件を追加して絞り込む" 押下
     await page.click('h2');
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(3000);
 
     // "レンタル日" の DatePickerをクリック
     await page.click("input[name=searchdate]");
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
 
     // DatePickerで日付を入力
     await selectDate(page, targetDate)
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(3000);
 
     // エリア海域を関東に設定
     await page.select('select[name="reservationArea"]', 'B02')
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(3000);
   
     // クラブ艇を"ボート"に設定
     await page.select('select[name="boat"]', '1')
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(3000);
   
     // "条件を追加して再検索"を押下
     await page.click('input[type="button"]');
-    await page.waitForTimeout(1000)
-
-    // await page.waitForTimeout(1000)
-    // await page.focus('#sort_boat')
+    await page.waitForTimeout(5000)
 
     const boats = await page.$$eval("section.contents", (async (list) => {
-        const targetUrl = "https://sea-style-m.yamaha-motor.co.jp"
-        const targetMarinas: string[] = [
+        // https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#code-transpilation-issues の理由からeval外のスコープの変数を参照できないのでここで定義
+        const targetMarinas = [
           "[ 横浜 ] D-marina",
           "[ 三浦半島 ] リビエラシーボニアマリーナ",
           "[ 湘南 ] 湘南マリーナ",
@@ -140,17 +143,46 @@ async function scrape() {
           "[ 横浜 ] 横浜ベイサイドマリーナ",
           "[ 逗葉 ] 小坪マリーナ",
         ]
+        const targetUrl = "https://sea-style-m.yamaha-motor.co.jp"
+        const targetBoats = [
+          "ベイフィッシャー",
+          "SR-X",
+          "AS-21",
+          "F.A.S.T.23",
+          "AX220",
+          "YFR-27"
+        ]
+
+        notifySlack(`検索対象のマリーナ一覧: ${targetMarinas.join(", ")}`)
+        notifySlack(`検索対象のボート一覧: ${targetBoats.join(", ")}`)
 
         return list.map(element => {
+          const marinaPath = element.querySelector("p.marinaName > a")?.getAttribute('href') ?? null
           return {
-            boatName: element.querySelector("h2.model")?.textContent,
-            marinaName: element.querySelector("p.marinaName")?.textContent,
-            marinaUrl: targetUrl + element.querySelector("a")?.getAttribute('href'),
+            boatName: element.querySelector("h2.model")?.textContent ?? null,
+            marinaName: element.querySelector("p.marinaName")?.textContent ?? null,
+            marinaUrl: marinaPath ? targetUrl + marinaPath: null,
           }
-        }).filter(e => e.boatName && e.marinaName && e.marinaUrl).filter(e => e.marinaName && targetMarinas.includes(e.marinaName))
+        })
+        .filter(e => e.boatName && e.marinaName && e.marinaUrl)
+        .filter(e => e.marinaName && targetMarinas.includes(e.marinaName))
+        .filter(e => e.boatName && targetBoats.filter(b=> e.boatName!.indexOf(b) !==-1).length > 0)
     }));
-    notifySlack(boats.map(obj => `${targetYear}/${targetMonth}/${targetDate}日は以下のマリーナでボートの空きがあります\n` + JSON.stringify(obj)).join("\n"))
+    notifySlack(boatsStringify(boats, targetYear, targetMonth, targetDate))
   }
+}
+
+function boatsStringify(boats: Boat[], targetYear: string, targetMonth: string, targetDate: string): string {
+  let line = ""
+  line += `${targetYear}/${targetMonth}/${targetDate}日は以下のマリーナでボートの空きがあります\n`
+  boats.map(boat => {
+    line += `---------------------------------------------------------------------\n`
+    line += ((boat?.marinaName ? `マリーナ名: ${boat.marinaName}`: "") + "\n")
+    line += ((boat?.boatName ? `ボート名: ${boat.boatName}`: "") + "\n")
+    line += ((boat?.marinaUrl ? `URL: ${boat.marinaUrl}`: "") + "\n")
+  })
+  line += "\n"
+  return line
 }
 
 async function notifySlack(content: string) {
