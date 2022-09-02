@@ -106,6 +106,24 @@ async function scrape() {
   const targetMonth = "9" 
   const holidayMap = splitDateByMonth(filterHolidays(dateRange(new Date(), 30)))
 
+  const targetMarinas = [
+    "[ 横浜 ] D-marina",
+    "[ 三浦半島 ] リビエラシーボニアマリーナ",
+    "[ 湘南 ] 湘南マリーナ",
+    "[ 横須賀 ] サニーサイドマリーナ　ウラガ",
+    "[ 横浜 ] 横浜ベイサイドマリーナ",
+    "[ 逗葉 ] 小坪マリーナ",
+  ]
+  const targetUrl = "https://sea-style-m.yamaha-motor.co.jp"
+  const targetBoats = [
+    "ベイフィッシャー",
+    "SR-X",
+    "AS-21",
+    "F.A.S.T.23",
+    "AX220",
+    "YFR-27"
+  ]
+
   for(const holiday of holidayMap.get(targetMonth)!) {
     const targetDate = holiday.getDate().toString()
 
@@ -133,28 +151,9 @@ async function scrape() {
     await page.click('input[type="button"]');
     await page.waitForTimeout(5000)
 
-    const boats = await page.$$eval("section.contents", (async (list) => {
+    const evaluate: (list: Element[]) => Promise<Boat[]> = (async (list: Element[]) => {
         // https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#code-transpilation-issues の理由からeval外のスコープの変数を参照できないのでここで定義
-        const targetMarinas = [
-          "[ 横浜 ] D-marina",
-          "[ 三浦半島 ] リビエラシーボニアマリーナ",
-          "[ 湘南 ] 湘南マリーナ",
-          "[ 横須賀 ] サニーサイドマリーナ　ウラガ",
-          "[ 横浜 ] 横浜ベイサイドマリーナ",
-          "[ 逗葉 ] 小坪マリーナ",
-        ]
-        const targetUrl = "https://sea-style-m.yamaha-motor.co.jp"
-        const targetBoats = [
-          "ベイフィッシャー",
-          "SR-X",
-          "AS-21",
-          "F.A.S.T.23",
-          "AX220",
-          "YFR-27"
-        ]
 
-        notifySlack(`検索対象のマリーナ一覧: ${targetMarinas.join(", ")}`)
-        notifySlack(`検索対象のボート一覧: ${targetBoats.join(", ")}`)
 
         return list.map(element => {
           const marinaPath = element.querySelector("p.marinaName > a")?.getAttribute('href') ?? null
@@ -167,10 +166,13 @@ async function scrape() {
         .filter(e => e.boatName && e.marinaName && e.marinaUrl)
         .filter(e => e.marinaName && targetMarinas.includes(e.marinaName))
         .filter(e => e.boatName && targetBoats.filter(b=> e.boatName!.indexOf(b) !==-1).length > 0)
-    }));
-    notifySlack(boatsStringify(boats, targetYear, targetMonth, targetDate))
+    })
+
+    const boats: any = await page.$$eval("section.contents", `${evaluate}`);
+    await notifySlack(boatsStringify(boats, targetYear, targetMonth, targetDate))
   }
 }
+
 
 function boatsStringify(boats: Boat[], targetYear: string, targetMonth: string, targetDate: string): string {
   let line = ""
