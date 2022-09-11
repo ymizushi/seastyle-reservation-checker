@@ -41,7 +41,7 @@ type Boat = {
 
 async function scrape() {
   const browser = await puppeteer.launch({
-    headless: false,
+    headless: true,
     defaultViewport: {
       width: 2000,
       height: 1200,

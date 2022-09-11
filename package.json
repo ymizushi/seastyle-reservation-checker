@@ -8,7 +8,6 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "exec": "npm run build && cd dist/ && node core.js",
-    "cypress:open": "cypress open",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
@@ -18,19 +17,18 @@
     "@holiday-jp/holiday_jp": "^2.4.0",
     "@types/node-fetch": "^2.6.2",
     "node-fetch": "^2.6.7",
-    "puppeteer": "^15.5.0",
-    "typescript": "^4.7.4"
+    "puppeteer": "^15.5.0"
   },
   "devDependencies": {
     "@types/source-map-support": "^0.5.4",
     "@typescript-eslint/eslint-plugin": "^5.33.1",
     "@typescript-eslint/parser": "^5.33.1",
-    "cypress": "^10.6.0",
     "eslint": "^8.22.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.2.1",
     "prettier": "^2.7.1",
     "source-map-support": "^0.5.21",
-    "tsc": "^2.0.4"
+    "tsc": "^2.0.4",
+    "typescript": "^4.8.3"
   }
 }
