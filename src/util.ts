@@ -28,9 +28,10 @@ export function filterHolidays(dates: Date[]): Date[] {
 }
 
 export async function notifySlack(content: string, url: string) {
-    return await postData(url, {
-      text: content,
-    });
+  console.log(`notify to Slack:\n ${content}`)
+  return await postData(url, {
+    text: content,
+  });
 }
 
 async function postData(url = "", data = {}) {

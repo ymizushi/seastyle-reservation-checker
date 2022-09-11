@@ -66,6 +66,8 @@ async function scrape() {
     "[ 横須賀 ] サニーサイドマリーナ　ウラガ",
     "[ 横浜 ] 横浜ベイサイドマリーナ",
     "[ 逗葉 ] 小坪マリーナ",
+    "[ 三浦半島 ] 油壺京急マリーナ",
+    "[ 三浦半島 ] 湘南サニーサイドマリーナ"
   ]
   const targetBoats = [
     "ベイフィッシャー",
@@ -76,8 +78,14 @@ async function scrape() {
     "YFR-27"
   ]
 
+  const targetMarinasString = `検索対象マリーナ:\n${targetMarinas.join("\n")}`
+  const targetBoatsString = `検索対象ボート:\n${targetBoats.join("\n")}`
+
+  SLACK_WEBHOOK_URL && await notifySlack(`${targetMarinasString}\n\n${targetBoatsString}\n\n`, SLACK_WEBHOOK_URL)
+
   for(const holiday of holidayMap.get(targetMonth)!) {
     const targetDate = holiday.getDate().toString()
+
 
     // "条件を追加して絞り込む" 押下
     await page.click('h2');
@@ -114,6 +122,7 @@ async function scrape() {
         })
         .filter(e => e.boatName && e.marinaName && e.marinaPath)
     });
+    console.log(`boats:\n ${JSON.stringify(boats)}`)
 
     const filteredBoats = boats
       .map(e => {
@@ -124,6 +133,7 @@ async function scrape() {
       })
       .filter(e => e.marinaName && targetMarinas.includes(e.marinaName))
       .filter(e => e.boatName && targetBoats.filter(b=> e.boatName!.indexOf(b) !==-1).length > 0)
+    console.log(`filteredBoats:\n ${JSON.stringify(filteredBoats)}`)
     if (filteredBoats.length > 1 && SLACK_WEBHOOK_URL) {
       await notifySlack(boatsStringify(filteredBoats, targetYear, targetMonth, targetDate), SLACK_WEBHOOK_URL)
     }
