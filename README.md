@@ -35,3 +35,11 @@ sudo apt-get install -y nodejs npm
 sudo npm cache clean
 sudo npm install npm n -g
 sudo n stable
+
+
+# crontab 
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/games:/usr/games"
+PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+SLACK_WEBHOOK_URL="https://hooks.slack.com/services/XXXXXXXXX/XXXXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX"
+24 23 * * *  (cd ~/Develop/seastyle-reservation-checker && npm run exec)
