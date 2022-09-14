@@ -33,8 +33,7 @@ async function scrape() {
     process.exit(1) 
   }
   console.log(`SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}`)
-  const targetMonth = "9" 
-  const holidayMap = splitDateByMonth(filterHolidays(dateRange(new Date(), 30)))
+  const holidays = filterHolidays(dateRange(new Date(), 30))
   await notifySlack(`${targetMarinasString}\n\n${targetBoatsString}\n\n`, SLACK_WEBHOOK_URL)
 
   const browser = await puppeteer.launch({
@@ -51,8 +50,7 @@ async function scrape() {
     "https://sea-style-m.yamaha-motor.co.jp/Search/Day/boat"
   );
 
-  const holidays = holidayMap.get(targetMonth)
-  if (!holidays) {
+  if (holidays.length === 0) {
     await notifySlack(`休日・祝日が見つかりません`, SLACK_WEBHOOK_URL)
     process.exit(1) 
   }
@@ -63,12 +61,8 @@ async function scrape() {
 }
 
 async function scrapePerDay(holiday: Date, page: Page, slackWebhookUrl: string) {
-  // TODO: 自動で生成できるようにする
-  const targetYear = '2020'
-  const targetMonth = '9'
-
-  const dayOfMonth = holiday.getDate().toString()
-
+  const targetDayOfMonth = holiday.getDate().toString()
+  const targetMonth = (holiday.getMonth()+1).toString()
   try {
     // "条件を追加して絞り込む" 押下
     await page.click('h2');
@@ -78,8 +72,17 @@ async function scrapePerDay(holiday: Date, page: Page, slackWebhookUrl: string) 
     await page.click("input[name=searchdate]");
     await page.waitForTimeout(2000);
 
-    // DatePickerで日付を入力
-    await selectDate(page, dayOfMonth)
+    const displayedMonthRaw = await page.$$eval(".ui-datepicker-month", async (list: Element[]) => {
+      return list[0].textContent
+    })
+    const displayedMonth = displayedMonthRaw?.replace('月', '')
+
+
+    if (targetMonth === displayedMonth) {
+      await selectDate(page, targetDayOfMonth, false)
+    } else {
+      await selectDate(page, targetDayOfMonth, true)
+    }
     await page.waitForTimeout(3000);
 
     // エリア海域を関東に設定
@@ -101,6 +104,7 @@ async function scrapePerDay(holiday: Date, page: Page, slackWebhookUrl: string) 
             boatName: element.querySelector("h2.model")?.textContent ?? null,
             marinaName: element.querySelector("p.marinaName")?.textContent ?? null,
             marinaPath: marinaPath ?? null,
+            period: element.querySelector("a > p.rsvDay")?.textContent ?? null
           }
         })
         .filter(e => e.boatName && e.marinaName && e.marinaPath)
@@ -115,24 +119,25 @@ async function scrapePerDay(holiday: Date, page: Page, slackWebhookUrl: string) 
       .filter(e => e.marinaName && targetMarinas.includes(e.marinaName))
       .filter(e => e.boatName && targetBoats.filter(b=> e.boatName!.indexOf(b) !==-1).length > 0)
     if (filteredBoats.length > 1) {
-      await notifySlack(boatsStringify(filteredBoats, targetYear, targetMonth, dayOfMonth), slackWebhookUrl)
+      await notifySlack(boatsStringify(filteredBoats, targetMonth, targetDayOfMonth), slackWebhookUrl)
     } else {
-      await notifySlack(`${targetYear}/${targetMonth}/${dayOfMonth} で空きボートは見つかりませんでした`, slackWebhookUrl)
+      await notifySlack(`${targetMonth}/${targetDayOfMonth} で空きボートは見つかりませんでした`, slackWebhookUrl)
     }
   } catch (e) {
     console.log(`例外発生: ${e}`)
-    await notifySlack(`${targetYear}/${targetMonth}/${dayOfMonth} の空きボート検索に失敗しました`, slackWebhookUrl)
+    await notifySlack(`${targetMonth}/${targetDayOfMonth} の空きボート検索に失敗しました`, slackWebhookUrl)
   }
 }
 
-function boatsStringify(boats: Boat[], targetYear: string, targetMonth: string, targetDate: string): string {
+function boatsStringify(boats: Boat[], targetMonth: string, targetDate: string): string {
   let line = ""
-  line += `${targetYear}/${targetMonth}/${targetDate}日は以下のマリーナでボートの空きがあります\n`
+  line += `${targetMonth}/${targetDate}日は以下のマリーナでボートの空きがあります\n`
   boats.map(boat => {
     line += `---------------------------------------------------------------------\n`
     line += ((boat?.marinaName ? `マリーナ名: ${boat.marinaName}`: "") + "\n")
     line += ((boat?.boatName ? `ボート名: ${boat.boatName}`: "") + "\n")
     line += ((boat?.marinaUrl ? `URL: ${boat.marinaUrl}`: "") + "\n")
+    line += ((boat?.period ? `時間帯: ${boat.period}`: "") + "\n")
   })
   line += "\n"
   return line
@@ -143,36 +148,27 @@ function boatsStringify(boats: Boat[], targetYear: string, targetMonth: string, 
   scrape();
 })();
 
-const SUCCEEDED = "SUCCEEDED" as const;
-const FAILED = "FAILED" as const;
-
-export type Result = typeof SUCCEEDED | typeof FAILED;
-
-export type ActionResult = {
-  result: Result;
-  page: puppeteer.Page;
-};
-
 async function selectDate(
   page: puppeteer.Page,
-  targetDate: string
-): Promise<ActionResult> {
-  await page.waitForTimeout(1000);
+  targetDate: string,
+  isNextMonth: boolean
+): Promise<void> {
+  if (isNextMonth) {
+    // 次へボタンをクリック
+    await page.click('a.ui-datepicker-next.ui-corner-all > span')
+    await page.waitForTimeout(5000)
+  }
+
   const dateElements = await page.$x(`//a[text()='${targetDate}']`);
   if (dateElements.length > 0) {
     await (dateElements[0] as any).click();
-    return {
-      result: SUCCEEDED,
-      page,
-    };
+    await page.waitForTimeout(5000)
   }
-  return {
-    result: FAILED,
-    page,
-  };
 }
+
 type Boat = {
   boatName: string|null,
   marinaName: string|null,
   marinaUrl: string|null,
+  period: string|null
 }
