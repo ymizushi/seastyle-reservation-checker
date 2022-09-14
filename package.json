@@ -8,7 +8,12 @@
     "build": "tsc",
     "exec": "npm run build && cd lib/ && node main.js",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "*.{js,jsx}": ["eslint"],
+    "*.{css,scss}": ["stylelint"]
   },
   "author": "ymizushi",
   "license": "ISC",
@@ -30,8 +35,10 @@
     "eslint": "^8.22.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.2.1",
+    "husky": "^8.0.1",
     "install": "^0.13.0",
     "jest": "^29.0.3",
+    "lint-staged": "^13.0.3",
     "prettier": "2.7.1",
     "source-map-support": "^0.5.21",
     "ts-jest": "^29.0.1",
