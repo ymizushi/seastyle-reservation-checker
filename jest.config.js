@@ -1,5 +1,9 @@
 /** @type {import('ts-jest/dist/types').InitialOptionsTsJest} */
-module.exports = {
-  preset: "ts-jest",
-  testEnvironment: "node",
+export default {
+  preset: "ts-jest/presets/default-esm",
+  globals: {
+    "ts-jest": {
+      useESM: true,
+    },
+  },
 };

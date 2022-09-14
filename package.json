@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "yamaha sea-style reservation status checker",
   "main": "lib/main.js",
+  "type": "module",
   "scripts": {
     "test": "jest",
     "build": "tsc",
@@ -23,19 +24,15 @@
   "license": "ISC",
   "dependencies": {
     "@holiday-jp/holiday_jp": "^2.4.0",
-    "@types/node-fetch": "^2.6.2",
     "node-fetch": "^2.6.7",
     "puppeteer": "^15.5.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.19.0",
-    "@babel/preset-env": "^7.19.0",
-    "@babel/preset-typescript": "^7.18.6",
     "@types/jest": "^29.0.1",
+    "@types/node-fetch": "^2.6.2",
     "@types/source-map-support": "^0.5.4",
     "@typescript-eslint/eslint-plugin": "^5.33.1",
     "@typescript-eslint/parser": "^5.33.1",
-    "babel-jest": "^29.0.3",
     "eslint": "^8.22.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.2.1",

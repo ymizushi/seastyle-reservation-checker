@@ -1,10 +1,3 @@
-import type { Config } from "jest";
-
-const config: Config = {
-  extensionsToTreatAsEsm: [".ts"],
-};
-
-export default config;
 import { dateRange } from "../util";
 import { expect, test } from "@jest/globals";
 
