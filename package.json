@@ -12,8 +12,12 @@
     "prepare": "husky install"
   },
   "lint-staged": {
-    "*.{js,jsx}": ["eslint"],
-    "*.{css,scss}": ["stylelint"]
+    "*.{js,jsx}": [
+      "eslint"
+    ],
+    "*.{css,scss}": [
+      "stylelint"
+    ]
   },
   "author": "ymizushi",
   "license": "ISC",
