@@ -10,7 +10,8 @@
     "exec": "npm run build && cd lib/ && node main.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "lint": "eslint"
   },
   "lint-staged": {
     "*.{js,jsx}": [
@@ -31,8 +32,8 @@
     "@types/jest": "^29.0.1",
     "@types/node-fetch": "^2.6.2",
     "@types/source-map-support": "^0.5.4",
-    "@typescript-eslint/eslint-plugin": "^5.33.1",
-    "@typescript-eslint/parser": "^5.33.1",
+    "@typescript-eslint/eslint-plugin": "^5.37.0",
+    "@typescript-eslint/parser": "^5.37.0",
     "eslint": "^8.22.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.2.1",
