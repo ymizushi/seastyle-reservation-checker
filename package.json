@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "yamaha sea-style reservation status checker",
   "main": "lib/main.js",
-  "type": "module",
   "scripts": {
     "test": "jest",
     "build": "tsc",
