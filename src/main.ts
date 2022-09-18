@@ -174,12 +174,12 @@ function boatsJsonify(
 ): Record<string, any> {
   let text = `${targetMonth}/${targetDate}`;
   const headBlock: Record<string, any> = {
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: `*${text}* で空きボートが見つかりました`,
-      },
-    }
+    type: "section",
+    text: {
+      type: "mrkdwn",
+      text: `*${text}* で空きボートが見つかりました`,
+    },
+  };
   const blocks = boats
     .map((boat) =>
       createBlocks(
@@ -194,7 +194,7 @@ function boatsJsonify(
     )
     .reduce((prev, current) => prev.concat(current), []);
   return {
-    blocks: [headBlock].concat(blocks)
+    blocks: [headBlock].concat(blocks),
   };
 }
 
