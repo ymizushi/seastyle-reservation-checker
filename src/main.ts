@@ -5,13 +5,18 @@ import { dateRange, filterHolidays, notifySlack } from "./util.js";
 
 const targetMarinas = [
   "[ 横浜 ] D-marina",
-  "[ 三浦半島 ] リビエラシーボニアマリーナ",
-  "[ 湘南 ] 湘南マリーナ",
-  "[ 横須賀 ] サニーサイドマリーナ　ウラガ",
   "[ 横浜 ] 横浜ベイサイドマリーナ",
-  "[ 逗葉 ] 小坪マリーナ",
+  "[ 横須賀 ] サニーサイドマリーナ　ウラガ",
+  "[ 三浦半島 ] リビエラシーボニアマリーナ",
   "[ 三浦半島 ] 油壺京急マリーナ",
   "[ 三浦半島 ] 湘南サニーサイドマリーナ",
+  "[ 三浦半島 ] 三崎港「うらり」",
+  "[ 湘南 ] 湘南マリーナ",
+  "[ 湘南 ] コグレマリンサービス",
+  "[ 湘南 ] 片倉ボートマリーナ",
+  "[ 逗葉 ] 葉山港",
+  "[ 逗葉 ] 葉山マリーナ",
+  "[ 逗葉 ] 小坪マリーナ",
 ];
 const targetBoats = [
   "ベイフィッシャー",
@@ -19,7 +24,6 @@ const targetBoats = [
   "AS-21",
   "F.A.S.T.23",
   "AX220",
-  "YFR-27",
 ];
 
 const targetMarinasString = `検索対象マリーナ:\n${targetMarinas.join("\n")}`;
@@ -35,7 +39,7 @@ async function scrape() {
   console.log(`SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}`);
   const holidays = filterHolidays(dateRange(new Date(), 30));
   await notifySlack(
-    `${targetMarinasString}\n\n${targetBoatsString}\n\n`,
+    { text: `${targetMarinasString}\n\n${targetBoatsString}` },
     SLACK_WEBHOOK_URL
   );
 
@@ -52,7 +56,10 @@ async function scrape() {
   await page.goto("https://sea-style-m.yamaha-motor.co.jp/Search/Day/boat");
 
   if (holidays.length === 0) {
-    await notifySlack(`休日・祝日が見つかりません`, SLACK_WEBHOOK_URL);
+    await notifySlack(
+      { text: `休日・祝日が見つかりません` },
+      SLACK_WEBHOOK_URL
+    );
     process.exit(1);
   }
   for (const holiday of holidays) {
@@ -109,28 +116,28 @@ async function scrapePerDay(
       async (list: Element[]) => {
         return list
           .map((element) => {
-            const marinaPath =
-              element.querySelector("p.marinaName > a")?.getAttribute("href") ??
-              null;
             return {
               boatName: element.querySelector("h2.model")?.textContent ?? null,
               marinaName:
                 element.querySelector("p.marinaName")?.textContent ?? null,
-              marinaPath: marinaPath ?? null,
+              marinaPath:
+                element
+                  .querySelector("p.marinaName > a")
+                  ?.getAttribute("href") ?? null,
               period:
                 element.querySelector("a > p.rsvDay")?.textContent ?? null,
+              imagePath:
+                element
+                  .querySelector("div.reservWrap > div > p > img")
+                  ?.getAttribute("src") ?? null,
+              altText:
+                element.querySelector("p.marinaName")?.textContent ?? null,
             };
           })
           .filter((e) => e.boatName && e.marinaName && e.marinaPath);
       }
     );
     const filteredBoats = boats
-      .map((e) => {
-        return {
-          ...e,
-          marinaUrl: targetUrl + e.marinaPath,
-        };
-      })
       .filter((e) => e.marinaName && targetMarinas.includes(e.marinaName))
       .filter(
         (e) =>
@@ -139,40 +146,57 @@ async function scrapePerDay(
       );
     if (filteredBoats.length > 1) {
       await notifySlack(
-        boatsStringify(filteredBoats, targetMonth, targetDayOfMonth),
+        boatsJsonify(filteredBoats, targetMonth, targetDayOfMonth),
         slackWebhookUrl
       );
     } else {
       await notifySlack(
-        `${targetMonth}/${targetDayOfMonth} で空きボートは見つかりませんでした`,
+        {
+          text: `${targetMonth}/${targetDayOfMonth} で空きボートは見つかりませんでした`,
+        },
         slackWebhookUrl
       );
     }
   } catch (e) {
     console.log(`例外発生: ${e}`);
     await notifySlack(
-      `${targetMonth}/${targetDayOfMonth} の空きボート検索に失敗しました`,
+      {
+        text: `${targetMonth}/${targetDayOfMonth} の空きボート検索に失敗しました`,
+      },
       slackWebhookUrl
     );
   }
 }
 
-function boatsStringify(
+function boatsJsonify(
   boats: Boat[],
   targetMonth: string,
   targetDate: string
-): string {
-  let line = "";
-  line += `${targetMonth}/${targetDate}日は以下のマリーナでボートの空きがあります\n`;
-  boats.map((boat) => {
-    line += `---------------------------------------------------------------------\n`;
-    line += (boat?.marinaName ? `マリーナ名: ${boat.marinaName}` : "") + "\n";
-    line += (boat?.boatName ? `ボート名: ${boat.boatName}` : "") + "\n";
-    line += (boat?.marinaUrl ? `URL: ${boat.marinaUrl}` : "") + "\n";
-    line += (boat?.period ? `時間帯: ${boat.period}` : "") + "\n";
-  });
-  line += "\n";
-  return line;
+): Record<string, any> {
+  let text = `${targetMonth}/${targetDate}`;
+  const headBlock: Record<string, any> = {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*${text}* で空きボートが見つかりました`,
+      },
+    }
+  const blocks = boats
+    .map((boat) =>
+      createBlocks(
+        text,
+        boat?.marinaName ?? "",
+        boat?.marinaPath ? `${targetUrl}${boat?.marinaPath}` : "",
+        boat?.boatName ?? "",
+        boat?.period ?? "",
+        boat?.imagePath ? `${targetUrl}${boat?.imagePath}` : "",
+        boat?.altText ?? ""
+      )
+    )
+    .reduce((prev, current) => prev.concat(current), []);
+  return {
+    blocks: [headBlock].concat(blocks)
+  };
 }
 
 (function main() {
@@ -201,6 +225,36 @@ async function selectDate(
 type Boat = {
   boatName: string | null;
   marinaName: string | null;
-  marinaUrl: string | null;
+  marinaPath: string | null;
   period: string | null;
+  imagePath: string | null;
+  altText: string | null;
 };
+
+function createBlocks(
+  targetDate: string,
+  marinaName: string,
+  marinaUrl: string,
+  boatName: string,
+  zone: string,
+  imageUrl: string,
+  altText: string
+): Array<Record<string, any>> {
+  return [
+    {
+      type: "divider",
+    },
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*${targetDate} ${zone}*\n*<${marinaUrl}|${marinaName}>*\nボート名: *${boatName}*`,
+      },
+      accessory: {
+        type: "image",
+        image_url: `${imageUrl}`,
+        alt_text: `${altText}`,
+      },
+    },
+  ];
+}

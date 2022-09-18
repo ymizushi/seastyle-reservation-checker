@@ -15,11 +15,9 @@ export function filterHolidays(dates: Date[]): Date[] {
   return dates.filter((date) => date.getDay() === 0 || date.getDay() === 6);
 }
 
-export async function notifySlack(content: string, url: string) {
-  console.log(`notify to Slack:\n ${content}`);
-  return await postData(url, {
-    text: content,
-  });
+export async function notifySlack(content: Record<string, any>, url: string) {
+  console.log(`notify to Slack:\n ${JSON.stringify(content)}`);
+  return await postData(url, content);
 }
 
 async function postData(url = "", data = {}) {
