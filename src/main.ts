@@ -44,8 +44,13 @@ async function scrape() {
   console.log(`SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}`);
   const holidays = filterHolidays(dateRange(new Date(), 31));
 
+  const targetDatesString = `検索対象日付: ${holidays
+    .map((day) => `*${day.getMonth() + 1}/${day.getDate()}*`)
+    .join(", ")}\n`;
+
   const targetMarinaBlock = createBlock(targetMarinasString);
   const targetBoatsBlock = createBlock(targetBoatsString);
+  const targetHolidays = createBlock(targetDatesString);
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -66,11 +71,14 @@ async function scrape() {
     );
     process.exit(1);
   }
-  let targetBlocks = [targetMarinaBlock, targetBoatsBlock];
+  let targetBlocks = [targetMarinaBlock, targetBoatsBlock, targetHolidays];
   for (const holiday of holidays) {
     const blocks = await scrapePerDay(holiday, page);
     targetBlocks = targetBlocks.concat(blocks);
   }
+  targetBlocks = targetBlocks.concat(
+    createBlock("スクレイピングが終了しました")
+  );
   notifySlack(
     {
       text: "スクレイピング結果",
@@ -94,14 +102,18 @@ async function scrapePerDay(holiday: Date, page: Page): Promise<Block[]> {
     await page.click("input[name=searchdate]");
     await page.waitForTimeout(2000);
 
+    // デートピッカーに表示されている月を取得
     const displayedMonthRaw = await page.$$eval(
       ".ui-datepicker-month",
       async (list: Element[]) => {
         return list[0].textContent;
       }
     );
+
+    // 文字列から月を削除
     const displayedMonth = displayedMonthRaw?.replace("月", "");
 
+    // 表示月と対象月が違う場合(翌月）は > で翌月をクリック
     if (targetMonth === displayedMonth) {
       await selectDate(page, targetDayOfMonth, false);
     } else {
@@ -147,23 +159,18 @@ async function scrapePerDay(holiday: Date, page: Page): Promise<Block[]> {
           .filter((e) => e.boatName && e.marinaName && e.marinaPath);
       }
     );
-    const filteredBoats = boats
-      .filter((e) => e.marinaName && targetMarinas.includes(e.marinaName))
-      .filter(
-        (e) =>
-          e.boatName &&
-          targetBoats.filter((b) => e.boatName!.indexOf(b) !== -1).length > 0
-      );
+    const filteredBoats = boats.filter(
+      (boat) =>
+        boat.marinaName &&
+        targetMarinas.includes(boat.marinaName) &&
+        boat.boatName &&
+        // ボート名に対象ボートの文字列が含まれる
+        targetBoats.filter((b) => boat.boatName!.indexOf(b) !== -1).length > 0
+    );
     if (filteredBoats.length > 1) {
       resultBlocks = resultBlocks.concat(
         boatsBlocks(filteredBoats, targetMonth, targetDayOfMonth)
       );
-    } else {
-      resultBlocks = resultBlocks.concat([
-        createBlock(
-          `${targetMonth}/${targetDayOfMonth} で空きボートは見つかりませんでした`
-        ),
-      ]);
     }
   } catch (e) {
     console.log(`例外発生: ${e}`);
