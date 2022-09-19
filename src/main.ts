@@ -1,7 +1,9 @@
 import * as puppeteer from "puppeteer";
 import { Page } from "puppeteer";
 import * as sourceMapSupport from "source-map-support";
-import { dateRange, filterHolidays, notifySlack } from "./util.js";
+import { dateRange, filterHolidays } from "./util.js";
+import { createBlock, notifySlack } from "./slack/util.js";
+import { Block } from "./slack/util.js";
 
 const targetMarinas = [
   "[ 横浜 ] D-marina",
@@ -25,8 +27,12 @@ const targetBoats = [
   "AX220",
 ];
 
-const targetMarinasString = `検索対象マリーナ:\n${targetMarinas.join("\n")}`;
-const targetBoatsString = `検索対象ボート:\n${targetBoats.join("\n")}`;
+const targetMarinasString = `検索対象マリーナ: ${targetMarinas
+  .map((s) => `*${s}*`)
+  .join(", ")}\n`;
+const targetBoatsString = `検索対象ボート: ${targetBoats
+  .map((s) => `*${s}*`)
+  .join(", ")}\n`;
 const targetUrl = "https://sea-style-m.yamaha-motor.co.jp";
 
 async function scrape() {
@@ -36,11 +42,10 @@ async function scrape() {
     process.exit(1);
   }
   console.log(`SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}`);
-  const holidays = filterHolidays(dateRange(new Date(), 30));
-  await notifySlack(
-    { text: `${targetMarinasString}\n\n${targetBoatsString}` },
-    SLACK_WEBHOOK_URL
-  );
+  const holidays = filterHolidays(dateRange(new Date(), 31));
+
+  const targetMarinaBlock = createBlock(targetMarinasString);
+  const targetBoatsBlock = createBlock(targetBoatsString);
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -61,17 +66,23 @@ async function scrape() {
     );
     process.exit(1);
   }
+  let targetBlocks = [targetMarinaBlock, targetBoatsBlock];
   for (const holiday of holidays) {
-    await scrapePerDay(holiday, page, SLACK_WEBHOOK_URL);
+    const blocks = await scrapePerDay(holiday, page);
+    targetBlocks = targetBlocks.concat(blocks);
   }
+  notifySlack(
+    {
+      text: "スクレイピング結果",
+      blocks: targetBlocks,
+    },
+    SLACK_WEBHOOK_URL
+  );
   browser.close();
 }
 
-async function scrapePerDay(
-  holiday: Date,
-  page: Page,
-  slackWebhookUrl: string
-) {
+async function scrapePerDay(holiday: Date, page: Page): Promise<Block[]> {
+  let resultBlocks: Block[] = [];
   const targetDayOfMonth = holiday.getDate().toString();
   const targetMonth = (holiday.getMonth() + 1).toString();
   try {
@@ -144,46 +155,40 @@ async function scrapePerDay(
           targetBoats.filter((b) => e.boatName!.indexOf(b) !== -1).length > 0
       );
     if (filteredBoats.length > 1) {
-      await notifySlack(
-        boatsJsonify(filteredBoats, targetMonth, targetDayOfMonth),
-        slackWebhookUrl
+      resultBlocks = resultBlocks.concat(
+        boatsBlocks(filteredBoats, targetMonth, targetDayOfMonth)
       );
     } else {
-      await notifySlack(
-        {
-          text: `${targetMonth}/${targetDayOfMonth} で空きボートは見つかりませんでした`,
-        },
-        slackWebhookUrl
-      );
+      resultBlocks = resultBlocks.concat([
+        createBlock(
+          `${targetMonth}/${targetDayOfMonth} で空きボートは見つかりませんでした`
+        ),
+      ]);
     }
   } catch (e) {
     console.log(`例外発生: ${e}`);
-    await notifySlack(
-      {
-        text: `${targetMonth}/${targetDayOfMonth} の空きボート検索に失敗しました`,
-      },
-      slackWebhookUrl
-    );
+    resultBlocks = resultBlocks.concat([
+      createBlock(
+        `${targetMonth}/${targetDayOfMonth} の空きボート検索に失敗しました`
+      ),
+    ]);
   }
+  return resultBlocks;
 }
 
-function boatsJsonify(
+function boatsBlocks(
   boats: Boat[],
   targetMonth: string,
-  targetDate: string
-): Record<string, any> {
-  let text = `${targetMonth}/${targetDate}`;
-  const headBlock: Record<string, any> = {
-    type: "section",
-    text: {
-      type: "mrkdwn",
-      text: `*${text}* で空きボートが見つかりました`,
-    },
-  };
-  const blocks = boats
+  targetDayOfMonth: string
+): Block[] {
+  let targetDate = `${targetMonth}/${targetDayOfMonth}`;
+  const headBlocks: Block[] = [
+    createBlock(`*${targetDate}* で空きボートが見つかりました`),
+  ];
+  const boatBlocks: Block[] = boats
     .map((boat) =>
-      createBlocks(
-        text,
+      createBoatBlocks(
+        targetDate,
         boat?.marinaName ?? "",
         boat?.marinaPath ? `${targetUrl}${boat?.marinaPath}` : "",
         boat?.boatName ?? "",
@@ -193,9 +198,9 @@ function boatsJsonify(
       )
     )
     .reduce((prev, current) => prev.concat(current), []);
-  return {
-    blocks: [headBlock].concat(blocks),
-  };
+  const result = headBlocks.concat(boatBlocks);
+  console.log(`create boatBlocks: ${JSON.stringify(result)}\n`);
+  return headBlocks.concat(boatBlocks);
 }
 
 (function main() {
@@ -230,30 +235,23 @@ type Boat = {
   altText: string | null;
 };
 
-function createBlocks(
+function createBoatBlocks(
   targetDate: string,
   marinaName: string,
   marinaUrl: string,
   boatName: string,
-  zone: string,
+  period: string,
   imageUrl: string,
   altText: string
-): Array<Record<string, any>> {
+): Block[] {
   return [
     {
       type: "divider",
     },
-    {
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: `*${targetDate} ${zone}*\n*<${marinaUrl}|${marinaName}>*\nボート名: *${boatName}*`,
-      },
-      accessory: {
-        type: "image",
-        image_url: `${imageUrl}`,
-        alt_text: `${altText}`,
-      },
-    },
+    createBlock(
+      `*${targetDate} ${period}*\n*<${marinaUrl}|${marinaName}>*\nボート名: *${boatName}*`,
+      imageUrl,
+      altText
+    ),
   ];
 }
