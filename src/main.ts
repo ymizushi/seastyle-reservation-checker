@@ -152,8 +152,7 @@ async function scrapePerDay(holiday: Date, page: Page): Promise<Block[]> {
                 element
                   .querySelector("div.reservWrap > div > p > img")
                   ?.getAttribute("src") ?? null,
-              altText:
-                element.querySelector("p.marinaName")?.textContent ?? null,
+              altText: element.querySelector("h2.model")?.textContent ?? null,
             };
           })
           .filter((e) => e.boatName && e.marinaName && e.marinaPath);
@@ -167,7 +166,7 @@ async function scrapePerDay(holiday: Date, page: Page): Promise<Block[]> {
         // ボート名に対象ボートの文字列が含まれる
         targetBoats.filter((b) => boat.boatName!.indexOf(b) !== -1).length > 0
     );
-    if (filteredBoats.length > 1) {
+    if (filteredBoats.length > 0) {
       resultBlocks = resultBlocks.concat(
         boatsBlocks(filteredBoats, targetMonth, targetDayOfMonth)
       );
