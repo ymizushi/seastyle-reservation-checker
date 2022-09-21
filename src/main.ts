@@ -71,14 +71,14 @@ async function scrape() {
   });
 
   const page = await browser.newPage();
-  await page.goto(seastyleSearchPage);
 
   let targetBlocks = [targetMarinaBlock, targetBoatsBlock, targetHolidays];
   for (const holiday of holidays) {
     try {
+      await page.goto(seastyleSearchPage);
       const boats = await scrapePerDay(holiday, page);
       const filteredBoats = filterBoats(boats);
-      if (filterBoats.length !== 0) {
+      if (filteredBoats.length > 0) {
         targetBlocks = targetBlocks.concat(
           createBoatsBlocks(filteredBoats, holiday)
         );
@@ -86,15 +86,15 @@ async function scrape() {
     } catch (e) {
       console.log(`例外発生: ${e}`);
       targetBlocks = targetBlocks.concat(
-        createBlock(
+        [createBlock(
           `${holiday.monthAndDayOfMonth()} の空きボート検索に失敗しました`
-        )
+        )]
       );
     }
   }
 
   targetBlocks = targetBlocks.concat(
-    createBlock("スクレイピングが終了しました")
+    [createBlock("スクレイピングが終了しました")]
   );
   notifySlack(
     {
