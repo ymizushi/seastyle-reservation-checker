@@ -1,6 +1,4 @@
-import fetch from "node-fetch";
-var fs = require("fs");
-var holiday_jp = require("@holiday-jp/holiday_jp");
+const holiday_jp = require("@holiday-jp/holiday_jp");
 
 export function dateRange(today: Date, addDays: number): Date[] {
   return [...new Array(addDays).keys()].map((num) => {
