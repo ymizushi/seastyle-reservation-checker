@@ -5,6 +5,8 @@ import { dateRange, filterHolidays } from "./util.js";
 import { createBlock, notifySlack } from "./slack/util.js";
 import { Block } from "./slack/util.js";
 
+const seastyleFqdn = "https://sea-style-m.yamaha-motor.co.jp";
+const seastyleSearchPage = `${seastyleFqdn}/Search/Day/boat`;
 const targetMarinas = [
   "[ 横浜 ] D-marina",
   "[ 横浜 ] 横浜ベイサイドマリーナ",
@@ -33,7 +35,6 @@ const targetMarinasString = `検索対象マリーナ: ${targetMarinas
 const targetBoatsString = `検索対象ボート: ${targetBoats
   .map((s) => `*${s}*`)
   .join(", ")}\n`;
-const targetUrl = "https://sea-style-m.yamaha-motor.co.jp";
 
 async function scrape() {
   const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
@@ -43,11 +44,17 @@ async function scrape() {
   }
   console.log(`SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}`);
   const holidays = filterHolidays(dateRange(new Date(), 31));
+  if (holidays.length === 0) {
+    await notifySlack(
+      { text: `休日・祝日が見つかりません` },
+      SLACK_WEBHOOK_URL
+    );
+    process.exit(1);
+  }
 
   const targetDatesString = `検索対象日付: ${holidays
     .map((day) => `*${day.getMonth() + 1}/${day.getDate()}*`)
     .join(", ")}\n`;
-
   const targetMarinaBlock = createBlock(targetMarinasString);
   const targetBoatsBlock = createBlock(targetBoatsString);
   const targetHolidays = createBlock(targetDatesString);
@@ -61,21 +68,14 @@ async function scrape() {
   });
 
   const page = await browser.newPage();
+  await page.goto(seastyleSearchPage);
 
-  await page.goto("https://sea-style-m.yamaha-motor.co.jp/Search/Day/boat");
-
-  if (holidays.length === 0) {
-    await notifySlack(
-      { text: `休日・祝日が見つかりません` },
-      SLACK_WEBHOOK_URL
-    );
-    process.exit(1);
-  }
   let targetBlocks = [targetMarinaBlock, targetBoatsBlock, targetHolidays];
   for (const holiday of holidays) {
     const blocks = await scrapePerDay(holiday, page);
     targetBlocks = targetBlocks.concat(blocks);
   }
+
   targetBlocks = targetBlocks.concat(
     createBlock("スクレイピングが終了しました")
   );
@@ -90,74 +90,11 @@ async function scrape() {
 }
 
 async function scrapePerDay(holiday: Date, page: Page): Promise<Block[]> {
-  let resultBlocks: Block[] = [];
   const targetDayOfMonth = holiday.getDate().toString();
   const targetMonth = (holiday.getMonth() + 1).toString();
   try {
-    // "条件を追加して絞り込む" 押下
-    await page.click("h2");
-    await page.waitForTimeout(3000);
-
-    // "レンタル日" の DatePickerをクリック
-    await page.click("input[name=searchdate]");
-    await page.waitForTimeout(2000);
-
-    // デートピッカーに表示されている月を取得
-    const displayedMonthRaw = await page.$$eval(
-      ".ui-datepicker-month",
-      async (list: Element[]) => {
-        return list[0].textContent;
-      }
-    );
-
-    // 文字列から月を削除
-    const displayedMonth = displayedMonthRaw?.replace("月", "");
-
-    // 表示月と対象月が違う場合(翌月）は > で翌月をクリック
-    if (targetMonth === displayedMonth) {
-      await selectDate(page, targetDayOfMonth, false);
-    } else {
-      await selectDate(page, targetDayOfMonth, true);
-    }
-    await page.waitForTimeout(3000);
-
-    // エリア海域を関東に設定
-    await page.select('select[name="reservationArea"]', "B02");
-    await page.waitForTimeout(3000);
-
-    // クラブ艇を"ボート"に設定
-    await page.select('select[name="boat"]', "1");
-    await page.waitForTimeout(3000);
-
-    // "条件を追加して再検索"を押下
-    await page.click('input[type="button"]');
-    await page.waitForTimeout(5000);
-
-    const boats = await page.$$eval(
-      "section.contents",
-      async (list: Element[]) => {
-        return list
-          .map((element) => {
-            return {
-              boatName: element.querySelector("h2.model")?.textContent ?? null,
-              marinaName:
-                element.querySelector("p.marinaName")?.textContent ?? null,
-              marinaPath:
-                element
-                  .querySelector("p.marinaName > a")
-                  ?.getAttribute("href") ?? null,
-              period:
-                element.querySelector("a > p.rsvDay")?.textContent ?? null,
-              imagePath:
-                element
-                  .querySelector("div.reservWrap > div > p > img")
-                  ?.getAttribute("src") ?? null,
-              altText: element.querySelector("h2.model")?.textContent ?? null,
-            };
-          })
-          .filter((e) => e.boatName && e.marinaName && e.marinaPath);
-      }
-    );
+    await manipulateSearchPage(page, targetMonth, targetDayOfMonth);
+    const boats = await evalBoats(page);
     const filteredBoats = boats.filter(
       (boat) =>
         boat.marinaName &&
@@ -167,27 +104,25 @@ async function scrapePerDay(holiday: Date, page: Page): Promise<Block[]> {
         targetBoats.filter((b) => boat.boatName!.indexOf(b) !== -1).length > 0
     );
     if (filteredBoats.length > 0) {
-      resultBlocks = resultBlocks.concat(
-        boatsBlocks(filteredBoats, targetMonth, targetDayOfMonth)
-      );
+      return createBoatsBlocks(filteredBoats, targetMonth, targetDayOfMonth);
     }
+    return [];
   } catch (e) {
     console.log(`例外発生: ${e}`);
-    resultBlocks = resultBlocks.concat([
+    return [
       createBlock(
         `${targetMonth}/${targetDayOfMonth} の空きボート検索に失敗しました`
       ),
-    ]);
+    ];
   }
-  return resultBlocks;
 }
 
-function boatsBlocks(
+function createBoatsBlocks(
   boats: Boat[],
   targetMonth: string,
   targetDayOfMonth: string
 ): Block[] {
-  let targetDate = `${targetMonth}/${targetDayOfMonth}`;
+  const targetDate = `${targetMonth}/${targetDayOfMonth}`;
   const headBlocks: Block[] = [
     createBlock(`*${targetDate}* で空きボートが見つかりました`),
   ];
@@ -196,23 +131,18 @@ function boatsBlocks(
       createBoatBlocks(
         targetDate,
         boat?.marinaName ?? "",
-        boat?.marinaPath ? `${targetUrl}${boat?.marinaPath}` : "",
+        boat?.marinaPath ? `${seastyleFqdn}${boat?.marinaPath}` : "",
         boat?.boatName ?? "",
         boat?.period ?? "",
-        boat?.imagePath ? `${targetUrl}${boat?.imagePath}` : "",
+        boat?.imagePath ? `${seastyleFqdn}${boat?.imagePath}` : "",
         boat?.altText ?? ""
       )
     )
     .reduce((prev, current) => prev.concat(current), []);
   const result = headBlocks.concat(boatBlocks);
   console.log(`create boatBlocks: ${JSON.stringify(result)}\n`);
-  return headBlocks.concat(boatBlocks);
+  return result;
 }
-
-(function main() {
-  sourceMapSupport.install();
-  scrape();
-})();
 
 async function selectDate(
   page: puppeteer.Page,
@@ -261,3 +191,72 @@ function createBoatBlocks(
     ),
   ];
 }
+
+async function evalBoats(page: Page): Promise<Boat[]> {
+  return await page.$$eval("section.contents", async (list: Element[]) => {
+    return list.map((element) => {
+      return {
+        boatName: element.querySelector("h2.model")?.textContent ?? null,
+        marinaName: element.querySelector("p.marinaName")?.textContent ?? null,
+        marinaPath:
+          element.querySelector("p.marinaName > a")?.getAttribute("href") ??
+          null,
+        period: element.querySelector("a > p.rsvDay")?.textContent ?? null,
+        imagePath:
+          element
+            .querySelector("div.reservWrap > div > p > img")
+            ?.getAttribute("src") ?? null,
+        altText: element.querySelector("h2.model")?.textContent ?? null,
+      };
+    });
+  });
+}
+
+async function manipulateSearchPage(
+  page: Page,
+  targetMonth: string,
+  targetDayOfMonth: string
+): Promise<void> {
+  // "条件を追加して絞り込む" 押下
+  await page.click("h2");
+  await page.waitForTimeout(3000);
+
+  // "レンタル日" の DatePickerをクリック
+  await page.click("input[name=searchdate]");
+  await page.waitForTimeout(2000);
+
+  // デートピッカーに表示されている月を取得
+  const displayedMonthRaw = await page.$$eval(
+    ".ui-datepicker-month",
+    async (list: Element[]) => {
+      return list[0].textContent;
+    }
+  );
+  // 文字列から月を削除
+  const displayedMonth = displayedMonthRaw?.replace("月", "");
+
+  // 表示月と対象月が違う場合(翌月）は > で翌月をクリック
+  if (targetMonth === displayedMonth) {
+    await selectDate(page, targetDayOfMonth, false);
+  } else {
+    await selectDate(page, targetDayOfMonth, true);
+  }
+  await page.waitForTimeout(3000);
+
+  // エリア海域を関東に設定
+  await page.select('select[name="reservationArea"]', "B02");
+  await page.waitForTimeout(3000);
+
+  // クラブ艇を"ボート"に設定
+  await page.select('select[name="boat"]', "1");
+  await page.waitForTimeout(3000);
+
+  // "条件を追加して再検索"を押下
+  await page.click('input[type="button"]');
+  await page.waitForTimeout(5000);
+}
+
+(function main() {
+  sourceMapSupport.install();
+  scrape();
+})();
