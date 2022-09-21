@@ -70,13 +70,13 @@ async function scrape() {
     },
   });
 
-  type BoatsMap = {[key: string]: Boat[]}
+  type BoatsMap = { [key: string]: Boat[] };
 
-  const boatsState: AsyncState<BoatsMap> = new FileBasedState<BoatsMap>()
+  const boatsState: AsyncState<BoatsMap> = new FileBasedState<BoatsMap>();
   const page = await browser.newPage();
-  const boatsMap: BoatsMap = {}
+  const boatsMap: BoatsMap = {};
 
-  console.log("boatsMap", await boatsState.read())
+  console.log("boatsMap", await boatsState.read());
   let targetBlocks = [targetMarinaBlock, targetBoatsBlock, targetHolidays];
   for (const holiday of holidays) {
     try {
@@ -84,13 +84,13 @@ async function scrape() {
       const boats = await scrapePerDay(holiday, page);
       const filteredBoats = filterBoats(boats);
       if (filteredBoats.length > 0) {
-        boatsMap[holiday.monthAndDayOfMonth()] = filteredBoats
+        boatsMap[holiday.monthAndDayOfMonth()] = filteredBoats;
         targetBlocks = targetBlocks.concat(
           createBoatsBlocks(filteredBoats, holiday)
         );
       }
-    } catch (e: Error|any) {
-      console.log(`例外発生: ${e ? e.stack: e}`);
+    } catch (e: Error | any) {
+      console.log(`例外発生: ${e ? e.stack : e}`);
       targetBlocks = targetBlocks.concat([
         createBlock(
           `${holiday.monthAndDayOfMonth()} の空きボート検索に失敗しました`
@@ -110,8 +110,8 @@ async function scrape() {
     SLACK_WEBHOOK_URL
   );
 
-  console.log("boatsMap:", JSON.stringify(boatsMap))
-  await boatsState.set(boatsMap)
+  console.log("boatsMap:", JSON.stringify(boatsMap));
+  await boatsState.set(boatsMap);
 
   browser.close();
 }
