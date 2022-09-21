@@ -1,12 +1,12 @@
 import * as puppeteer from "puppeteer";
 import { Page } from "puppeteer";
 import * as sourceMapSupport from "source-map-support";
-import { dateRange, filterHolidays } from "./util.js";
+import { dateRange, filterHolidays } from "./util/date.js";
 import { createBlock, notifySlack } from "./slack/util.js";
 import { Block } from "./slack/util.js";
-import { AsyncState, State } from "./state.js";
-import * as fs from "node:fs/promises";
-import "./Date.extensions";
+import "./global/Date.extensions";
+import { AsyncState } from "./interface/db/state.js";
+import { FileBasedState } from "./impl/db/file_state.js";
 
 const seastyleFqdn = "https://sea-style-m.yamaha-motor.co.jp";
 const seastyleSearchPage = `${seastyleFqdn}/Search/Day/boat`;
@@ -70,8 +70,13 @@ async function scrape() {
     },
   });
 
-  const page = await browser.newPage();
+  type BoatsMap = {[key: string]: Boat[]}
 
+  const boatsState: AsyncState<BoatsMap> = new FileBasedState<BoatsMap>()
+  const page = await browser.newPage();
+  const boatsMap: BoatsMap = {}
+
+  console.log("boatsMap", await boatsState.read())
   let targetBlocks = [targetMarinaBlock, targetBoatsBlock, targetHolidays];
   for (const holiday of holidays) {
     try {
@@ -79,12 +84,13 @@ async function scrape() {
       const boats = await scrapePerDay(holiday, page);
       const filteredBoats = filterBoats(boats);
       if (filteredBoats.length > 0) {
+        boatsMap[holiday.monthAndDayOfMonth()] = filteredBoats
         targetBlocks = targetBlocks.concat(
           createBoatsBlocks(filteredBoats, holiday)
         );
       }
-    } catch (e) {
-      console.log(`例外発生: ${e}`);
+    } catch (e: Error|any) {
+      console.log(`例外発生: ${e ? e.stack: e}`);
       targetBlocks = targetBlocks.concat([
         createBlock(
           `${holiday.monthAndDayOfMonth()} の空きボート検索に失敗しました`
@@ -103,6 +109,10 @@ async function scrape() {
     },
     SLACK_WEBHOOK_URL
   );
+
+  console.log("boatsMap:", JSON.stringify(boatsMap))
+  await boatsState.set(boatsMap)
+
   browser.close();
 }
 
@@ -263,15 +273,3 @@ async function manipulateSearchPage(
   sourceMapSupport.install();
   scrape();
 })();
-
-class FileBasedState implements AsyncState<Boat[]> {
-  static filePath = "state.json";
-  set(value: Boat[]): Promise<void> {
-    const str = JSON.stringify(value);
-    return fs.writeFile(FileBasedState.filePath, str);
-  }
-  read(): Promise<Boat[]> {
-    const file = fs.readFile(FileBasedState.filePath);
-    return file.then((buf) => JSON.parse(buf.toString()));
-  }
-}
