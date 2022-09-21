@@ -85,17 +85,17 @@ async function scrape() {
       }
     } catch (e) {
       console.log(`例外発生: ${e}`);
-      targetBlocks = targetBlocks.concat(
-        [createBlock(
+      targetBlocks = targetBlocks.concat([
+        createBlock(
           `${holiday.monthAndDayOfMonth()} の空きボート検索に失敗しました`
-        )]
-      );
+        ),
+      ]);
     }
   }
 
-  targetBlocks = targetBlocks.concat(
-    [createBlock("スクレイピングが終了しました")]
-  );
+  targetBlocks = targetBlocks.concat([
+    createBlock("スクレイピングが終了しました"),
+  ]);
   notifySlack(
     {
       text: "スクレイピング結果",
@@ -130,7 +130,7 @@ function createBoatsBlocks(boats: Boat[], targetDate: Date): Block[] {
     createBlock(`*${targetDateStr}* で空きボートが見つかりました`),
   ];
   const boatBlocks: Block[] = boats
-    .map(boat =>
+    .map((boat) =>
       createBoatBlocks(
         targetDateStr,
         boat?.marinaName ?? "",
