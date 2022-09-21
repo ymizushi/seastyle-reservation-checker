@@ -4,6 +4,9 @@ import * as sourceMapSupport from "source-map-support";
 import { dateRange, filterHolidays } from "./util.js";
 import { createBlock, notifySlack } from "./slack/util.js";
 import { Block } from "./slack/util.js";
+import { AsyncState, State } from "./state.js";
+import * as fs from "node:fs/promises";
+import "./Date.extensions";
 
 const seastyleFqdn = "https://sea-style-m.yamaha-motor.co.jp";
 const seastyleSearchPage = `${seastyleFqdn}/Search/Day/boat`;
@@ -68,17 +71,31 @@ async function scrape() {
   });
 
   const page = await browser.newPage();
-  await page.goto(seastyleSearchPage);
 
   let targetBlocks = [targetMarinaBlock, targetBoatsBlock, targetHolidays];
   for (const holiday of holidays) {
-    const blocks = await scrapePerDay(holiday, page);
-    targetBlocks = targetBlocks.concat(blocks);
+    try {
+      await page.goto(seastyleSearchPage);
+      const boats = await scrapePerDay(holiday, page);
+      const filteredBoats = filterBoats(boats);
+      if (filteredBoats.length > 0) {
+        targetBlocks = targetBlocks.concat(
+          createBoatsBlocks(filteredBoats, holiday)
+        );
+      }
+    } catch (e) {
+      console.log(`例外発生: ${e}`);
+      targetBlocks = targetBlocks.concat([
+        createBlock(
+          `${holiday.monthAndDayOfMonth()} の空きボート検索に失敗しました`
+        ),
+      ]);
+    }
   }
 
-  targetBlocks = targetBlocks.concat(
-    createBlock("スクレイピングが終了しました")
-  );
+  targetBlocks = targetBlocks.concat([
+    createBlock("スクレイピングが終了しました"),
+  ]);
   notifySlack(
     {
       text: "スクレイピング結果",
@@ -89,47 +106,33 @@ async function scrape() {
   browser.close();
 }
 
-async function scrapePerDay(holiday: Date, page: Page): Promise<Block[]> {
-  const targetDayOfMonth = holiday.getDate().toString();
-  const targetMonth = (holiday.getMonth() + 1).toString();
-  try {
-    await manipulateSearchPage(page, targetMonth, targetDayOfMonth);
-    const boats = await evalBoats(page);
-    const filteredBoats = boats.filter(
-      (boat) =>
-        boat.marinaName &&
-        targetMarinas.includes(boat.marinaName) &&
-        boat.boatName &&
-        // ボート名に対象ボートの文字列が含まれる
-        targetBoats.filter((b) => boat.boatName!.indexOf(b) !== -1).length > 0
-    );
-    if (filteredBoats.length > 0) {
-      return createBoatsBlocks(filteredBoats, targetMonth, targetDayOfMonth);
-    }
-    return [];
-  } catch (e) {
-    console.log(`例外発生: ${e}`);
-    return [
-      createBlock(
-        `${targetMonth}/${targetDayOfMonth} の空きボート検索に失敗しました`
-      ),
-    ];
-  }
+function filterBoats(boats: Boat[]): Boat[] {
+  return boats.filter(
+    (boat) =>
+      boat.marinaName &&
+      targetMarinas.includes(boat.marinaName) &&
+      boat.boatName &&
+      // ボート名に対象ボートの文字列が含まれる
+      targetBoats.filter((b) => boat.boatName!.indexOf(b) !== -1).length > 0
+  );
 }
 
-function createBoatsBlocks(
-  boats: Boat[],
-  targetMonth: string,
-  targetDayOfMonth: string
-): Block[] {
-  const targetDate = `${targetMonth}/${targetDayOfMonth}`;
+async function scrapePerDay(holiday: Date, page: Page): Promise<Boat[]> {
+  const targetDayOfMonth = holiday.dayOfMonth().toString();
+  const targetMonth = holiday.month().toString();
+  await manipulateSearchPage(page, targetMonth, targetDayOfMonth);
+  return await evalBoats(page);
+}
+
+function createBoatsBlocks(boats: Boat[], targetDate: Date): Block[] {
+  const targetDateStr = targetDate.monthAndDayOfMonth();
   const headBlocks: Block[] = [
-    createBlock(`*${targetDate}* で空きボートが見つかりました`),
+    createBlock(`*${targetDateStr}* で空きボートが見つかりました`),
   ];
   const boatBlocks: Block[] = boats
     .map((boat) =>
       createBoatBlocks(
-        targetDate,
+        targetDateStr,
         boat?.marinaName ?? "",
         boat?.marinaPath ? `${seastyleFqdn}${boat?.marinaPath}` : "",
         boat?.boatName ?? "",
@@ -260,3 +263,15 @@ async function manipulateSearchPage(
   sourceMapSupport.install();
   scrape();
 })();
+
+class FileBasedState implements AsyncState<Boat[]> {
+  static filePath = "state.json";
+  set(value: Boat[]): Promise<void> {
+    const str = JSON.stringify(value);
+    return fs.writeFile(FileBasedState.filePath, str);
+  }
+  read(): Promise<Boat[]> {
+    const file = fs.readFile(FileBasedState.filePath);
+    return file.then((buf) => JSON.parse(buf.toString()));
+  }
+}
