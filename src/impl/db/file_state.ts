@@ -10,11 +10,11 @@ export class FileBasedState<T> implements AsyncState<T> {
       "utf-8"
     );
   }
-  read(): Promise<void|T> {
+  read(): Promise<void | T> {
     return fs
       .readFile(FileBasedState.filePath, "utf-8")
       .then((buf) => JSON.parse(buf))
       .then((v) => v as T)
-      .catch(e => console.log(e));
+      .catch((e) => console.log(e));
   }
 }
