@@ -5,5 +5,5 @@ export interface State<T> {
 
 export interface AsyncState<T> {
   set(value: T): Promise<void>;
-  read(): Promise<T>;
+  read(): Promise<T|void>;
 }
