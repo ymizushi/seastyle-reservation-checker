@@ -7,6 +7,7 @@ import { Block } from "./slack/util.js";
 import "./global/Date.extensions";
 import { AsyncState } from "./interface/db/state.js";
 import { FileBasedState } from "./impl/db/file_state.js";
+import { Boat, BoatsMap } from "./scraper/boat.js";
 
 const seastyleFqdn = "https://sea-style-m.yamaha-motor.co.jp";
 const seastyleSearchPage = `${seastyleFqdn}/Search/Day/boat`;
@@ -69,8 +70,6 @@ async function scrape() {
       height: 1200,
     },
   });
-
-  type BoatsMap = { [key: string]: Boat[] };
 
   const boatsState: AsyncState<BoatsMap> = new FileBasedState<BoatsMap>();
   const page = await browser.newPage();
@@ -174,15 +173,6 @@ async function selectDate(
     await page.waitForTimeout(5000);
   }
 }
-
-type Boat = {
-  boatName: string | null;
-  marinaName: string | null;
-  marinaPath: string | null;
-  period: string | null;
-  imagePath: string | null;
-  altText: string | null;
-};
 
 function createBoatBlocks(
   targetDate: string,
