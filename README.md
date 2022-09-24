@@ -6,7 +6,9 @@
 
 ```sh
 $Env:SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/T9WTHTN73/XXXXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX" # if windows power-shell
+$Env:ENABLE_DIFF_MODE = "true" # if windows power-shell
 export SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T9WTHTN73/XXXXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX # if unix/linux
+export ENABLE_DIFF_MODE=true # if unix/linux
 
 # You additionally set environment variable like below if you are runnning on ubuntu.
 # sudo apt install chromium
