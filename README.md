@@ -41,5 +41,6 @@ PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/ga
 PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 SLACK_WEBHOOK_URL="https://hooks.slack.com/services/XXXXXXXXX/XXXXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX"
+ENABLE_DIFF_MODE="true"
 24 23 \* \* \* (cd ~/Develop/seastyle-reservation-checker && npm run exec)
 ```

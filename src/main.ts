@@ -7,7 +7,11 @@ import { Block } from "./slack/util.js";
 import "./global/Date.extensions";
 import { AsyncState } from "./interface/db/state.js";
 import { FileBasedState } from "./impl/db/file_state.js";
-import { Boat, BoatsMap } from "./scraper/boat.js";
+import { Boat, BoatsMap, isSameBoatMap } from "./scraper/boat.js";
+
+const NormalMode = "normal" as const;
+const DiffMode = "diff" as const;
+type Mode = typeof NormalMode | typeof DiffMode;
 
 const seastyleFqdn = "https://sea-style-m.yamaha-motor.co.jp";
 const seastyleSearchPage = `${seastyleFqdn}/Search/Day/boat`;
@@ -42,6 +46,7 @@ const targetBoatsString = `検索対象ボート: ${targetBoats
 
 async function scrape() {
   const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
+  const mode: Mode = process.env.ENABLE_DIFF_MODE == "true" ? "diff" : "normal";
   if (!SLACK_WEBHOOK_URL) {
     console.log(`SLACK_WEBHOOK_URLが設定されていません`);
     process.exit(1);
@@ -56,6 +61,9 @@ async function scrape() {
     process.exit(1);
   }
 
+  const modeString = `現在の動作モード: ${mode}`;
+  console.log(modeString);
+  const appModeBlock = createBlock(modeString);
   const targetDatesString = `検索対象日付: ${holidays
     .map((day) => `*${day.getMonth() + 1}/${day.getDate()}*`)
     .join(", ")}\n`;
@@ -73,17 +81,22 @@ async function scrape() {
 
   const boatsState: AsyncState<BoatsMap> = new FileBasedState<BoatsMap>();
   const page = await browser.newPage();
-  const boatsMap: BoatsMap = {};
+  const currentBoatsMap: BoatsMap = {};
+  const beforeBoatsMap = await boatsState.read();
 
-  console.log("boatsMap", await boatsState.read());
-  let targetBlocks = [targetMarinaBlock, targetBoatsBlock, targetHolidays];
+  let targetBlocks = [
+    appModeBlock,
+    targetMarinaBlock,
+    targetBoatsBlock,
+    targetHolidays,
+  ];
   for (const holiday of holidays) {
     try {
       await page.goto(seastyleSearchPage);
       const boats = await scrapePerDay(holiday, page);
       const filteredBoats = filterBoats(boats);
       if (filteredBoats.length > 0) {
-        boatsMap[holiday.monthAndDayOfMonth()] = filteredBoats;
+        currentBoatsMap[holiday.monthAndDayOfMonth()] = filteredBoats;
         targetBlocks = targetBlocks.concat(
           createBoatsBlocks(filteredBoats, holiday)
         );
@@ -101,16 +114,26 @@ async function scrape() {
   targetBlocks = targetBlocks.concat([
     createBlock("スクレイピングが終了しました"),
   ]);
-  notifySlack(
-    {
-      text: "スクレイピング結果",
-      blocks: targetBlocks,
-    },
-    SLACK_WEBHOOK_URL
-  );
+  console.log("beforeBoatsMap:", beforeBoatsMap);
+  console.log("currentBoatsMap:", currentBoatsMap);
 
-  console.log("boatsMap:", JSON.stringify(boatsMap));
-  await boatsState.set(boatsMap);
+  if (
+    mode === DiffMode &&
+    beforeBoatsMap &&
+    isSameBoatMap(currentBoatsMap, beforeBoatsMap)
+  ) {
+    console.log("予約状況に変化なし");
+  } else {
+    notifySlack(
+      {
+        text: "スクレイピング結果",
+        blocks: targetBlocks,
+      },
+      SLACK_WEBHOOK_URL
+    );
+  }
+
+  await boatsState.set(currentBoatsMap);
 
   browser.close();
 }
