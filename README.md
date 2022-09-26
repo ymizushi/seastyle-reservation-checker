@@ -8,6 +8,7 @@ YAMAHAシースタイルのボート予約状況をスクレイピングによ�
 
 ```sh
 # set environment variable
+
 # if windows power-shell
 $Env:SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/XXXXXXXXX/XXXXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX" 
 $Env:ENABLE_DIFF_MODE = "true"
@@ -39,9 +40,8 @@ sudo npm install npm n -g
 sudo n stable
 ```
 
-# setup crontab
+## edit crontab like below
 
-## edit crontab
 ```crontab
 PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/games:/usr/games"
 PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
