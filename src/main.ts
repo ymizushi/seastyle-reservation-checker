@@ -65,7 +65,7 @@ async function scrape() {
   console.log(modeString);
   const appModeBlock = createBlock(modeString);
   const targetDatesString = `検索対象日付: ${holidays
-    .map((day) => `*${day.getMonth() + 1}/${day.getDate()}*`)
+    .map(day => `*${day.month()}/${day.dayOfMonth() }*`)
     .join(", ")}\n`;
   const targetMarinaBlock = createBlock(targetMarinasString);
   const targetBoatsBlock = createBlock(targetBoatsString);
