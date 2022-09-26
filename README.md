@@ -28,9 +28,9 @@ npm run format
 npm run test
 ```
 
-# Setup on Raspberry Pie 4
+## Setup on Raspberry Pie 4
 
-## execute below command
+### execute below command
 
 ```sh
 sudo apt-get update
@@ -40,7 +40,7 @@ sudo npm install npm n -g
 sudo n stable
 ```
 
-## edit crontab like below
+### edit crontab like below
 
 ```crontab
 PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/games:/usr/games"
