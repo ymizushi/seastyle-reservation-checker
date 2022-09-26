@@ -84,12 +84,11 @@ async function scrape() {
   const currentBoatsMap: BoatsMap = {};
   const beforeBoatsMap = await boatsState.read();
 
-  let targetBlocks = [
-    appModeBlock,
-    targetMarinaBlock,
-    targetBoatsBlock,
-    targetHolidays,
-  ];
+  let targetBlocks =
+    mode === DiffMode
+      ? [appModeBlock, targetHolidays]
+      : [appModeBlock, targetMarinaBlock, targetBoatsBlock, targetHolidays];
+
   for (const holiday of holidays) {
     try {
       await page.goto(seastyleSearchPage);
