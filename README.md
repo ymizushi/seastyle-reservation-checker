@@ -1,5 +1,7 @@
 # seastyle-reservation-checker [![Node.js CI](https://github.com/ymizushi/seastyle-reservation-checker/actions/workflows/node.js.yml/badge.svg)](https://github.com/ymizushi/seastyle-reservation-checker/actions/workflows/node.js.yml)
 
+![Screenshot 2022-09-28 014223](https://user-images.githubusercontent.com/788785/192586316-460b2942-8cb3-44c4-ac45-ccc252a0a76f.jpg)
+
 YAMAHA シースタイルのボート予約状況をスクレイピングにより Slack に通知するバッチ.
 
 開発者のローカル開発環境が Windows11 で、バッチは Raspberry Pi 4 上で動かしているため、Windows11 と Raspberry Pi OS on Arm64 でのみ動作確認をしています.
