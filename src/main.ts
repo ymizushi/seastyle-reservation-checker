@@ -156,14 +156,10 @@ async function scrapePerDay(holiday: Date, page: Page): Promise<Boat[]> {
 }
 
 function createBoatsBlocks(boats: Boat[], targetDate: Date): Block[] {
-  const targetDateStr = targetDate.monthAndDayOfMonth();
-  const headBlocks: Block[] = [
-    createBlock(`*${targetDateStr}* で空きボートが見つかりました`),
-  ];
   const boatBlocks: Block[] = boats
     .map((boat) =>
       createBoatBlocks(
-        targetDateStr,
+        targetDate,
         boat?.marinaName ?? "",
         boat?.marinaPath ? `${seastyleFqdn}${boat?.marinaPath}` : "",
         boat?.boatName ?? "",
@@ -172,8 +168,16 @@ function createBoatsBlocks(boats: Boat[], targetDate: Date): Block[] {
         boat?.altText ?? ""
       )
     )
-    .reduce((prev, current) => prev.concat(current), []);
-  const result = headBlocks.concat(boatBlocks);
+    .reduce(
+      (prev, current) =>
+        prev.concat(
+          current.concat({
+            type: "divider",
+          })
+        ),
+      []
+    );
+  const result = boatBlocks;
   console.log(`create boatBlocks: ${JSON.stringify(result)}\n`);
   return result;
 }
@@ -197,7 +201,7 @@ async function selectDate(
 }
 
 function createBoatBlocks(
-  targetDate: string,
+  targetDate: Date,
   marinaName: string,
   marinaUrl: string,
   boatName: string,
@@ -206,11 +210,8 @@ function createBoatBlocks(
   altText: string
 ): Block[] {
   return [
-    {
-      type: "divider",
-    },
     createBlock(
-      `*${targetDate} ${period}*\n*<${marinaUrl}|${marinaName}>*\nボート名: *${boatName}*`,
+      `*${targetDate.month()}/${targetDate.dayOfMonth()}(${targetDate.dayOfWeekByJapanese()})* ${period}\n*<${marinaUrl}|${marinaName}>* *${boatName}*`,
       imageUrl,
       altText
     ),
