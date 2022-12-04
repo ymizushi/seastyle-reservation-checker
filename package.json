@@ -7,7 +7,7 @@
     "test": "jest",
     "build": "tsc",
     "clean": "rimraf lib",
-    "exec": "npm run build && cd lib/ && node main.js -–experimental-fetch",
+    "exec": "npm run build && cd lib/ && node main.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky install",

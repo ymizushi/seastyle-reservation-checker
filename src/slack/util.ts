@@ -38,6 +38,7 @@ export async function notifySlack(
 }
 
 async function postData(url = "", data: Record<string, any>) {
+  console.log(JSON.stringify(data));
   return await fetch(url, {
     method: "POST",
     headers: {
