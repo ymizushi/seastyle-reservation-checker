@@ -1,4 +1,4 @@
 *~
 node_modules/
 lib/
-.env.ps1
+.env.local*
