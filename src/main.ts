@@ -29,13 +29,7 @@ const targetMarinas = [
   "[ 逗葉 ] 葉山マリーナ",
   "[ 逗葉 ] 小坪マリーナ",
 ];
-const targetBoats = [
-  "ベイフィッシャー",
-  "SR-X",
-  "AS-21",
-  "F.A.S.T.23",
-  "AX220",
-];
+const targetBoats = ["ベイフィッシャー", "SR-X", "F.A.S.T.23"];
 
 const targetMarinasString = `検索対象マリーナ: ${targetMarinas
   .map((s) => `*${s}*`)
