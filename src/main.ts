@@ -23,13 +23,13 @@ const targetMarinas = [
   "[ 三浦半島 ] 油壺京急マリーナ",
   "[ 三浦半島 ] 湘南サニーサイドマリーナ",
   "[ 三浦半島 ] 三崎港「うらり」",
-  "[ 湘南 ] 湘南マリーナ",
+  // "[ 湘南 ] 湘南マリーナ",
   // "[ 湘南 ] 片倉ボートマリーナ",
   // "[ 逗葉 ] 葉山港",
   "[ 逗葉 ] 葉山マリーナ",
-  // "[ 逗葉 ] 小坪マリーナ",
+  "[ 逗葉 ] 小坪マリーナ",
 ];
-const targetBoats = ["SR-X", "F.A.S.T.23", "F.A.S.T.25"];
+const targetBoats = ["SR-X", "F.A.S.T.23", "F.A.S.T.26"];
 
 const targetMarinasString = `検索対象マリーナ: ${targetMarinas
   .map((s) => `*${s}*`)
