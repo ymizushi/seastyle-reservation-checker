@@ -21,7 +21,7 @@ const targetMarinas = [
   "[ 横須賀 ] サニーサイドマリーナ　ウラガ",
   "[ 三浦半島 ] リビエラシーボニアマリーナ",
   "[ 三浦半島 ] 油壺京急マリーナ",
-  // "[ 三浦半島 ] 湘南サニーサイドマリーナ",
+  "[ 三浦半島 ] 湘南サニーサイドマリーナ",
   "[ 三浦半島 ] 三崎港「うらり」",
   "[ 湘南 ] 湘南マリーナ",
   // "[ 湘南 ] 片倉ボートマリーナ",
@@ -29,7 +29,7 @@ const targetMarinas = [
   "[ 逗葉 ] 葉山マリーナ",
   // "[ 逗葉 ] 小坪マリーナ",
 ];
-const targetBoats = ["SR-X", "F.A.S.T.23"];
+const targetBoats = ["SR-X", "F.A.S.T.23", "F.A.S.T.25"];
 
 const targetMarinasString = `検索対象マリーナ: ${targetMarinas
   .map((s) => `*${s}*`)
@@ -46,7 +46,7 @@ async function scrape() {
     process.exit(1);
   }
   console.log(`SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}`);
-  const holidays = filterHolidays(dateRange(new Date(), 31));
+  const holidays = filterHolidays(dateRange(new Date(), 15));
   if (holidays.length === 0) {
     await notifySlack(
       { text: `休日・祝日が見つかりません` },
