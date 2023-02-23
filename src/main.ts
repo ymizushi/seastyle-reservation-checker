@@ -23,7 +23,7 @@ const targetMarinas = [
   "[ 三浦半島 ] 油壺京急マリーナ",
   "[ 三浦半島 ] 湘南サニーサイドマリーナ",
   "[ 三浦半島 ] 三崎港「うらり」",
-  // "[ 湘南 ] 湘南マリーナ",
+  "[ 湘南 ] 湘南マリーナ",
   // "[ 湘南 ] 片倉ボートマリーナ",
   // "[ 逗葉 ] 葉山港",
   "[ 逗葉 ] 葉山マリーナ",
@@ -46,7 +46,7 @@ async function scrape() {
     process.exit(1);
   }
   console.log(`SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}`);
-  const holidays = filterHolidays(dateRange(new Date(), 15));
+  const holidays = filterHolidays(dateRange(new Date(), 30));
   if (holidays.length === 0) {
     await notifySlack(
       { text: `休日・祝日が見つかりません` },
