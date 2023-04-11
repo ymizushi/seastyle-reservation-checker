@@ -114,13 +114,13 @@ async function scrape() {
   ) {
     console.log("予約状況に変化なし");
   } else {
-    notifySlack(
+    chunkArray(targetBlocks, 20).map(blocks => notifySlack(
       {
         text: "スクレイピング結果",
-        blocks: targetBlocks,
+        blocks: blocks,
       },
       SLACK_WEBHOOK_URL
-    );
+    ));
   }
 
   await boatsState.set(currentBoatsMap);
@@ -171,6 +171,17 @@ function createBoatsBlocks(boats: Boat[], targetDate: Date): Block[] {
   const result = boatBlocks;
   console.log(`create boatBlocks: ${JSON.stringify(result)}\n`);
   return result;
+}
+function chunkArray<T>(array: T[], chunkSize: number): T[][] {
+  const chunkedArray: T[][] = [];
+  let index = 0;
+
+  while (index < array.length) {
+    chunkedArray.push(array.slice(index, index + chunkSize));
+    index += chunkSize;
+  }
+
+  return chunkedArray;
 }
 
 async function selectDate(
