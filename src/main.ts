@@ -16,7 +16,7 @@ type Mode = typeof NormalMode | typeof DiffMode;
 const seastyleFqdn = "https://sea-style-m.yamaha-motor.co.jp";
 const seastyleSearchPage = `${seastyleFqdn}/Search/Day/boat`;
 const targetMarinas = [
-  // "[ 横浜 ] D-marina",
+  "[ 横浜 ] D-marina",
   "[ 横浜 ] 横浜ベイサイドマリーナ",
   "[ 横須賀 ] サニーサイドマリーナ　ウラガ",
   "[ 三浦半島 ] リビエラシーボニアマリーナ",
@@ -24,8 +24,8 @@ const targetMarinas = [
   "[ 三浦半島 ] 湘南サニーサイドマリーナ",
   "[ 三浦半島 ] 三崎港「うらり」",
   "[ 湘南 ] 湘南マリーナ",
-  // "[ 湘南 ] 片倉ボートマリーナ",
-  // "[ 逗葉 ] 葉山港",
+  "[ 湘南 ] 片倉ボートマリーナ",
+  "[ 逗葉 ] 葉山港",
   "[ 逗葉 ] 葉山マリーナ",
   "[ 逗葉 ] 小坪マリーナ",
 ];
@@ -114,12 +114,14 @@ async function scrape() {
   ) {
     console.log("予約状況に変化なし");
   } else {
-    notifySlack(
-      {
-        text: "スクレイピング結果",
-        blocks: targetBlocks,
-      },
-      SLACK_WEBHOOK_URL
+    chunkArray(targetBlocks, 20).map((blocks) =>
+      notifySlack(
+        {
+          text: "スクレイピング結果",
+          blocks: blocks,
+        },
+        SLACK_WEBHOOK_URL
+      )
     );
   }
 
@@ -171,6 +173,17 @@ function createBoatsBlocks(boats: Boat[], targetDate: Date): Block[] {
   const result = boatBlocks;
   console.log(`create boatBlocks: ${JSON.stringify(result)}\n`);
   return result;
+}
+function chunkArray<T>(array: T[], chunkSize: number): T[][] {
+  const chunkedArray: T[][] = [];
+  let index = 0;
+
+  while (index < array.length) {
+    chunkedArray.push(array.slice(index, index + chunkSize));
+    index += chunkSize;
+  }
+
+  return chunkedArray;
 }
 
 async function selectDate(
