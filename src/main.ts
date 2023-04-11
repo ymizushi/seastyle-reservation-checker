@@ -16,7 +16,7 @@ type Mode = typeof NormalMode | typeof DiffMode;
 const seastyleFqdn = "https://sea-style-m.yamaha-motor.co.jp";
 const seastyleSearchPage = `${seastyleFqdn}/Search/Day/boat`;
 const targetMarinas = [
-  // "[ 横浜 ] D-marina",
+  "[ 横浜 ] D-marina",
   "[ 横浜 ] 横浜ベイサイドマリーナ",
   "[ 横須賀 ] サニーサイドマリーナ　ウラガ",
   "[ 三浦半島 ] リビエラシーボニアマリーナ",
@@ -24,8 +24,8 @@ const targetMarinas = [
   "[ 三浦半島 ] 湘南サニーサイドマリーナ",
   "[ 三浦半島 ] 三崎港「うらり」",
   "[ 湘南 ] 湘南マリーナ",
-  // "[ 湘南 ] 片倉ボートマリーナ",
-  // "[ 逗葉 ] 葉山港",
+  "[ 湘南 ] 片倉ボートマリーナ",
+  "[ 逗葉 ] 葉山港",
   "[ 逗葉 ] 葉山マリーナ",
   "[ 逗葉 ] 小坪マリーナ",
 ];
