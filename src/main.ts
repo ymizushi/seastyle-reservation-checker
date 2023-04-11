@@ -114,13 +114,15 @@ async function scrape() {
   ) {
     console.log("予約状況に変化なし");
   } else {
-    chunkArray(targetBlocks, 20).map(blocks => notifySlack(
-      {
-        text: "スクレイピング結果",
-        blocks: blocks,
-      },
-      SLACK_WEBHOOK_URL
-    ));
+    chunkArray(targetBlocks, 20).map((blocks) =>
+      notifySlack(
+        {
+          text: "スクレイピング結果",
+          blocks: blocks,
+        },
+        SLACK_WEBHOOK_URL
+      )
+    );
   }
 
   await boatsState.set(currentBoatsMap);
