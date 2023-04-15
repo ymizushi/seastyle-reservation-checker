@@ -104,6 +104,8 @@ async function scrape() {
     }
   }
 
+  const sleep = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
   targetBlocks = targetBlocks.concat([
     createBlock("スクレイピングが終了しました"),
   ]);
@@ -114,15 +116,16 @@ async function scrape() {
   ) {
     console.log("予約状況に変化なし");
   } else {
-    chunkArray(targetBlocks, 20).map((blocks) =>
-      notifySlack(
+    chunkArray(targetBlocks, 25).map(async (blocks, index) => {
+      await sleep(index * 1000);
+      await notifySlack(
         {
           text: "スクレイピング結果",
           blocks: blocks,
         },
         SLACK_WEBHOOK_URL
-      )
-    );
+      );
+    });
   }
 
   await boatsState.set(currentBoatsMap);
