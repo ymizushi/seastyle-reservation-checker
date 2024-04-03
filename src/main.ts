@@ -46,7 +46,7 @@ async function scrape() {
     process.exit(1);
   }
   console.log(`SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}`);
-  const holidays = filterHolidays(dateRange(new Date(), 30));
+  const holidays = filterHolidays(dateRange(new Date(), 31));
   if (holidays.length === 0) {
     await notifySlack(
       { text: `休日・祝日が見つかりません` },
